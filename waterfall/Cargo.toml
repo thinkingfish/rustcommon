@@ -1,6 +1,6 @@
 [package]
 name = "waterfall"
-version = "0.8.2"
+version = "0.9.0"
 authors = ["Brian Martin <brian@pelikan.io>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -9,14 +9,13 @@ homepage = "https://github.com/pelikan-io/rustcommon"
 repository = "https://github.com/pelikan-io/rustcommon"
 
 [dependencies]
-clocksource = { version = "0.6.0" }
+clocksource = { version = "0.8.0", path = "../clocksource" }
 dejavu = "2.37.0"
-image = "0.24.3"
-log = "0.4.17"
-heatmap = { version = "0.7.1", path = "../heatmap" }
-histogram = { version = "0.7.1" }
-rusttype = "0.9.2"
+histogram = { version = "0.11.5", path = "../histogram" }
+image = "0.25"
+log = "0.4.29"
+rusttype = "0.9.3"
 
 [dev-dependencies]
-rand = "0.8.5"
-rand_distr = "0.4.3"
+rand = "0.10"
+rand_distr = "0.6"

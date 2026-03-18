@@ -2,9 +2,10 @@
 // Licensed under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 
-use heatmap::*;
-use rand::thread_rng;
+use clocksource::precise::Duration;
+use rand::RngExt;
 use rand_distr::*;
+use std::time::Instant;
 use waterfall::*;
 
 fn main() {
@@ -31,46 +32,38 @@ pub enum Shape {
 }
 
 pub fn simulate(shape: Shape) {
-    let duration = Duration::from_secs(10);
+    let run_duration = std::time::Duration::from_secs(10);
     println!(
         "Simulating for {:?} distribution for {:?} seconds",
         shape,
-        duration.as_secs_f64()
+        run_duration.as_secs_f64()
     );
 
-    let heatmap = Heatmap::new(
-        0,
-        10,
-        30,
-        Duration::from_secs(10),
-        Duration::from_millis(250),
-        None,
-        None,
-    )
-    .unwrap();
+    let mut heatmap =
+        Heatmap::new(0, 30, Duration::from_secs(10), Duration::from_millis(250)).unwrap();
 
     let cauchy = Cauchy::new(500_000.0, 2_000.00).unwrap();
     let normal = Normal::new(200_000.0, 100_000.0).unwrap();
-    let uniform = Uniform::new_inclusive(10_000.0, 200_000.0);
+    let uniform = rand_distr::Uniform::new(10_000.0, 200_000.0).unwrap();
     let triangular = Triangular::new(1.0, 200_000.0, 50_000.0).unwrap();
     let gamma = Gamma::new(2.0, 2.0).unwrap();
 
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
     let start = Instant::now();
     loop {
-        if start.elapsed() >= duration {
+        if start.elapsed() >= run_duration {
             break;
         }
         let value: f64 = match shape {
-            Shape::Cauchy => cauchy.sample(&mut rng),
-            Shape::Normal => normal.sample(&mut rng),
-            Shape::Uniform => uniform.sample(&mut rng),
-            Shape::Triangular => triangular.sample(&mut rng),
-            Shape::Gamma => gamma.sample(&mut rng) * 100_000.0,
+            Shape::Cauchy => rng.sample(cauchy),
+            Shape::Normal => rng.sample(normal),
+            Shape::Uniform => rng.sample(uniform),
+            Shape::Triangular => rng.sample(triangular),
+            Shape::Gamma => rng.sample(gamma) * 100_000.0,
         };
         let value = value.floor() as u64;
         if value != 0 {
-            let _ = heatmap.increment(Instant::now(), value, 1);
+            let _ = heatmap.increment(clocksource::precise::Instant::now(), value, 1);
         }
     }
 

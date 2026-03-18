@@ -4,10 +4,12 @@
 
 //! This crate is used to render a waterfall style plot of a heatmap
 
+mod heatmap;
 mod palettes;
 
-use clocksource::{DateTime, Nanoseconds, UnixInstant};
-use heatmap::*;
+use clocksource::datetime::DateTime;
+use clocksource::precise::{Duration, UnixInstant};
+pub use heatmap::Heatmap;
 pub use palettes::Palette;
 
 use image::*;
@@ -80,11 +82,11 @@ impl WaterfallBuilder {
     }
 
     // find the bucket with the highest weight
-    fn max_weight(&self, heatmap: &heatmap::Heatmap) -> f64 {
+    fn max_weight(&self, heatmap: &Heatmap) -> f64 {
         let mut max_weight = 0.0;
         for slice in heatmap {
             for b in slice {
-                let weight = self.weight(b.count().into(), b.high() - b.low() + 1);
+                let weight = self.weight(b.count(), b.end() - b.start() + 1);
                 if weight > max_weight {
                     max_weight = weight;
                 }
@@ -94,7 +96,7 @@ impl WaterfallBuilder {
     }
 
     /// Generate the waterfall from the provided heatmap
-    pub fn build(self, heatmap: &heatmap::Heatmap) {
+    pub fn build(self, heatmap: &Heatmap) {
         let height = heatmap.active_slices();
         let width = heatmap.buckets();
 
@@ -123,7 +125,7 @@ impl WaterfallBuilder {
             // build grayscale buffer
             for (y, slice) in heatmap.into_iter().enumerate() {
                 for (x, b) in slice.into_iter().enumerate() {
-                    let weight = self.weight(b.count().into(), b.high() - b.low() + 1);
+                    let weight = self.weight(b.count(), b.end() - b.start() + 1);
                     let scaled_weight = weight / max_weight;
                     let index = (scaled_weight * (colors.len() - 1) as f64).round() as u8;
                     buf.put_pixel(
@@ -149,7 +151,7 @@ impl WaterfallBuilder {
             // set the pixels in the buffer
             for (y, slice) in heatmap.into_iter().enumerate() {
                 for (x, b) in slice.into_iter().enumerate() {
-                    let weight = self.weight(b.count().into(), b.high() - b.low() + 1);
+                    let weight = self.weight(b.count(), b.end() - b.start() + 1);
                     let scaled_weight = weight / max_weight;
                     let index = (scaled_weight * (colors.len() - 1) as f64).round() as usize;
                     let color = colors[index];
@@ -166,7 +168,7 @@ impl WaterfallBuilder {
         if !label_keys.is_empty() {
             let slice = heatmap.into_iter().next().unwrap();
             for (x, bucket) in slice.into_iter().enumerate() {
-                let value = bucket.high();
+                let value = bucket.end();
                 if value >= label_keys[l] {
                     if let Some(label) = labels.get(&label_keys[l]) {
                         render_text(label, 25.0, x, 0, &mut buf);
@@ -187,7 +189,7 @@ impl WaterfallBuilder {
         }
 
         // add the timestamp labels along the left side
-        let now = UnixInstant::<Nanoseconds<u64>>::now();
+        let now = UnixInstant::now();
         let mut display_time = heatmap.start_at();
         let ntick = (1 + now.duration_since(display_time).as_nanos()
             / heatmap.resolution().as_nanos()) as usize;
